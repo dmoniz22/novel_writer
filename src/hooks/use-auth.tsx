@@ -24,7 +24,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     getRedirectResult(auth).catch((error) => {
-      console.error("Error getting redirect result", error);
+      // This can happen if the user clicks sign-in and then closes the tab
+      // before completing the sign-in flow. We can safely ignore this error.
+      if (error.code !== 'auth/cancelled-popup-request') {
+          console.error("Error getting redirect result", error);
+      }
     });
 
     return () => unsubscribe();
