@@ -9,7 +9,6 @@ const firebaseConfig = {
   "storageBucket": "sagaforge-472hm.firebasestorage.app",
   "apiKey": "AIzaSyAdp4c5Mi4vKkZBAlL5Mw1yYW3OrI8L1Es",
   "authDomain": "sagaforge-472hm.firebaseapp.com",
-  "measurementId": "",
   "messagingSenderId": "852838120377"
 };
 
