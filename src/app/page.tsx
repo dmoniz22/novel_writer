@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { generateChapterText } from '@/ai/flows/generate-chapter-text';
+import { useAuth } from '@/hooks/use-auth';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload, PenTool, Book, History } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload, PenTool, Book, History, LogIn, LogOut } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 
@@ -32,7 +33,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 type FormKeys = keyof Pick<FormValues, 'seriesOutline' | 'worldbuildingInformation' | 'bookOutline' | 'chapterOutline' | 'previousChapters'>;
 
-export default function SagaForgePage() {
+function AuthContent() {
   const [generatedText, setGeneratedText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -177,6 +178,140 @@ export default function SagaForgePage() {
       )}
     />
   );
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-3 space-y-8">
+            <Card className="shadow-lg hover:shadow-primary/20 transition-shadow">
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2 text-2xl"><Swords className="text-accent" /> Knowledge Base</CardTitle>
+                <CardDescription>Input your foundational lore. The more detailed, the better the results.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {renderFormField("seriesOutline", "Series Outline", "Paste your grand series outline here...")}
+                {renderFormField("worldbuildingInformation", "Worldbuilding & Lore", "Describe your world: its magic system, key locations, cultures, history...", <Map size={16} />)}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg hover:shadow-primary/20 transition-shadow">
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2 text-2xl"><BookOpen className="text-accent"/> Current Manuscript</CardTitle>
+                <CardDescription>Detail the current book and the chapter you want to generate.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                  {renderFormField("bookOutline", "Book Outline", "Outline the plot for the current book...")}
+                  {renderFormField("chapterOutline", "Chapter Outline", "Provide a detailed outline for this specific chapter. What happens? Who is present? What is the tone?", <FileText size={16} />)}
+                  {renderFormField("previousChapters", "Previous Chapters", "Paste the text of previously generated chapters here to maintain narrative and stylistic consistency.", <History size={16} />)}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="chapterLength"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="font-bold flex items-center gap-2"><Book size={16} />Est. Chapter Length</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., 3000 words or 10 pages" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                      <FormField
+                        control={form.control}
+                        name="writingStyle"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="font-bold flex items-center gap-2"><PenTool size={16}/>Writing Style</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., J.R.R. Tolkien, Brandon Sanderson" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                  </div>
+              </CardContent>
+            </Card>
+              <Button type="submit" size="lg" className="w-full font-bold text-lg" disabled={isGenerating}>
+              <Sparkles className="mr-2 h-5 w-5" />
+              {isGenerating ? 'Forging your chapter...' : 'Forge Chapter'}
+            </Button>
+          </div>
+
+          <div className="lg:col-span-2">
+            <Card className="shadow-lg h-full sticky top-24">
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2 text-2xl"><Bot className="text-accent" /> Generated Chapter</CardTitle>
+                <CardDescription>Your AI-generated text will appear here for review.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[calc(100%-10rem)] flex flex-col">
+                <ScrollArea className="flex-1 pr-4 -mr-4 mb-4">
+                  {isGenerating ? (
+                    <div className="space-y-4">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-[90%]" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-[80%]" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-[95%]" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
+                  ) : generatedText ? (
+                    <div className="prose prose-sm dark:prose-invert whitespace-pre-wrap font-body leading-relaxed">
+                      {generatedText}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                      <p>Your chapter awaits its creation.</p>
+                    </div>
+                  )}
+                </ScrollArea>
+                {generatedText && !isGenerating && (
+                  <>
+                    <Separator className="my-4"/>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                        <Button variant="outline" onClick={handleRequestChanges}>Request Changes</Button>
+                        <Button onClick={handleApprove}>Approve & Save for Context</Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </form>
+    </Form>
+  )
+}
+
+function UnauthContent() {
+  const { signInWithGoogle } = useAuth();
+  return (
+    <div className="text-center">
+        <h2 className="font-headline text-4xl font-bold tracking-tight">Welcome, Story-Weaver</h2>
+        <p className="text-lg text-muted-foreground mt-2 mb-8">Please sign in to begin forging your next great saga.</p>
+        <Button size="lg" onClick={signInWithGoogle}>
+            <LogIn className="mr-2 h-5 w-5" />
+            Sign In with Google
+        </Button>
+    </div>
+  );
+}
+
+export default function SagaForgePage() {
+  const { user, signInWithGoogle, signOut } = useAuth();
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // This effect ensures we don't flash the unauth content while firebase is initializing
+  useState(() => {
+    // This is a bit of a hack to wait for the auth state to be ready
+    // A better solution would be to have a status in the useAuth hook
+    setTimeout(() => {
+      setIsAuthReady(true);
+    }, 500)
+  });
 
 
   return (
@@ -192,131 +327,42 @@ export default function SagaForgePage() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="fantasy character" />
+                    <AvatarImage src={user?.photoURL || "https://placehold.co/100x100.png"} alt="User Avatar" data-ai-hint="fantasy character" />
                     <AvatarFallback><User /></AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>My Library</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                { user ? (
+                  <>
+                    <DropdownMenuItem disabled>
+                      <div className='flex flex-col'>
+                        <span className='font-bold'>{user.displayName}</span>
+                        <span className='text-xs text-muted-foreground'>{user.email}</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={signOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onClick={signInWithGoogle}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign In
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </header>
       
-      <main className="flex-1 container py-8">
-        <div className="text-center mb-12">
-          <h2 className="font-headline text-4xl font-bold tracking-tight">Welcome, Story-Weaver</h2>
-          <p className="text-lg text-muted-foreground mt-2">Provide the AI with your lore, and watch as it forges your next chapter.</p>
-        </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid lg:grid-cols-5 gap-8">
-              <div className="lg:col-span-3 space-y-8">
-                <Card className="shadow-lg hover:shadow-primary/20 transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2 text-2xl"><Swords className="text-accent" /> Knowledge Base</CardTitle>
-                    <CardDescription>Input your foundational lore. The more detailed, the better the results.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {renderFormField("seriesOutline", "Series Outline", "Paste your grand series outline here...")}
-                    {renderFormField("worldbuildingInformation", "Worldbuilding & Lore", "Describe your world: its magic system, key locations, cultures, history...", <Map size={16} />)}
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg hover:shadow-primary/20 transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2 text-2xl"><BookOpen className="text-accent"/> Current Manuscript</CardTitle>
-                    <CardDescription>Detail the current book and the chapter you want to generate.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                     {renderFormField("bookOutline", "Book Outline", "Outline the plot for the current book...")}
-                     {renderFormField("chapterOutline", "Chapter Outline", "Provide a detailed outline for this specific chapter. What happens? Who is present? What is the tone?", <FileText size={16} />)}
-                     {renderFormField("previousChapters", "Previous Chapters", "Paste the text of previously generated chapters here to maintain narrative and stylistic consistency.", <History size={16} />)}
-                     <div className="grid sm:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="chapterLength"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel className="font-bold flex items-center gap-2"><Book size={16} />Est. Chapter Length</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., 3000 words or 10 pages" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="writingStyle"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel className="font-bold flex items-center gap-2"><PenTool size={16}/>Writing Style</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., J.R.R. Tolkien, Brandon Sanderson" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                     </div>
-                  </CardContent>
-                </Card>
-                 <Button type="submit" size="lg" className="w-full font-bold text-lg" disabled={isGenerating}>
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  {isGenerating ? 'Forging your chapter...' : 'Forge Chapter'}
-                </Button>
-              </div>
-
-              <div className="lg:col-span-2">
-                <Card className="shadow-lg h-full sticky top-24">
-                  <CardHeader>
-                    <CardTitle className="font-headline flex items-center gap-2 text-2xl"><Bot className="text-accent" /> Generated Chapter</CardTitle>
-                    <CardDescription>Your AI-generated text will appear here for review.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-[calc(100%-10rem)] flex flex-col">
-                    <ScrollArea className="flex-1 pr-4 -mr-4 mb-4">
-                      {isGenerating ? (
-                        <div className="space-y-4">
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-[90%]" />
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-[80%]" />
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-full" />
-                           <Skeleton className="h-4 w-[95%]" />
-                          <Skeleton className="h-4 w-full" />
-                        </div>
-                      ) : generatedText ? (
-                        <div className="prose prose-sm dark:prose-invert whitespace-pre-wrap font-body leading-relaxed">
-                          {generatedText}
-                        </div>
-                      ) : (
-                        <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                          <p>Your chapter awaits its creation.</p>
-                        </div>
-                      )}
-                    </ScrollArea>
-                    {generatedText && !isGenerating && (
-                      <>
-                        <Separator className="my-4"/>
-                        <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                           <Button variant="outline" onClick={handleRequestChanges}>Request Changes</Button>
-                           <Button onClick={handleApprove}>Approve & Save for Context</Button>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </form>
-        </Form>
+      <main className="flex-1 container py-8 flex items-center justify-center">
+        { !isAuthReady && <Skeleton className="h-48 w-full" />}
+        { isAuthReady && user && <AuthContent /> }
+        { isAuthReady && !user && <UnauthContent /> }
       </main>
     </div>
   );
