@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload, PenTool, Book } from 'lucide-react';
+import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload, PenTool, Book, History } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -24,12 +24,13 @@ const formSchema = z.object({
   worldbuildingInformation: z.string().min(50, 'Worldbuilding information must be at least 50 characters.'),
   bookOutline: z.string().min(50, 'Book outline must be at least 50 characters.'),
   chapterOutline: z.string().min(50, 'Chapter outline must be at least 50 characters.'),
+  previousChapters: z.string().optional(),
   chapterLength: z.string().optional(),
   writingStyle: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-type FormKeys = keyof Pick<FormValues, 'seriesOutline' | 'worldbuildingInformation' | 'bookOutline' | 'chapterOutline'>;
+type FormKeys = keyof Pick<FormValues, 'seriesOutline' | 'worldbuildingInformation' | 'bookOutline' | 'chapterOutline' | 'previousChapters'>;
 
 export default function SagaForgePage() {
   const [generatedText, setGeneratedText] = useState('');
@@ -40,6 +41,7 @@ export default function SagaForgePage() {
     worldbuildingInformation: useRef<HTMLInputElement>(null),
     bookOutline: useRef<HTMLInputElement>(null),
     chapterOutline: useRef<HTMLInputElement>(null),
+    previousChapters: useRef<HTMLInputElement>(null),
   };
 
   const form = useForm<FormValues>({
@@ -49,6 +51,7 @@ export default function SagaForgePage() {
       worldbuildingInformation: '',
       bookOutline: '',
       chapterOutline: '',
+      previousChapters: '',
       chapterLength: '',
       writingStyle: '',
     },
@@ -120,10 +123,16 @@ export default function SagaForgePage() {
   }
 
   const handleApprove = () => {
+    const currentPreviousChapters = form.getValues('previousChapters') || '';
+    const newSeparator = currentPreviousChapters.length > 0 ? '\n\n---\n\n' : '';
+    const newPreviousChapters = `${currentPreviousChapters}${newSeparator}${generatedText}`;
+    form.setValue('previousChapters', newPreviousChapters, { shouldValidate: true });
+
     toast({
       title: 'Chapter Approved!',
-      description: 'This chapter has been saved to your library (mocked).',
+      description: 'This chapter has been appended to the "Previous Chapters" field.',
     });
+    setGeneratedText('');
   };
 
   const handleRequestChanges = () => {
@@ -227,6 +236,7 @@ export default function SagaForgePage() {
                   <CardContent className="space-y-6">
                      {renderFormField("bookOutline", "Book Outline", "Outline the plot for the current book...")}
                      {renderFormField("chapterOutline", "Chapter Outline", "Provide a detailed outline for this specific chapter. What happens? Who is present? What is the tone?", <FileText size={16} />)}
+                     {renderFormField("previousChapters", "Previous Chapters", "Paste the text of previously generated chapters here to maintain narrative and stylistic consistency.", <History size={16} />)}
                      <div className="grid sm:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
@@ -297,7 +307,7 @@ export default function SagaForgePage() {
                         <Separator className="my-4"/>
                         <div className="flex flex-col sm:flex-row gap-2 justify-end">
                            <Button variant="outline" onClick={handleRequestChanges}>Request Changes</Button>
-                           <Button onClick={handleApprove}>Approve & Save</Button>
+                           <Button onClick={handleApprove}>Approve & Save for Context</Button>
                         </div>
                       </>
                     )}

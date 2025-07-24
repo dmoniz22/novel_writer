@@ -20,6 +20,10 @@ const GenerateChapterTextInputSchema = z.object({
     .describe('Information about the world in which the story takes place.'),
   bookOutline: z.string().describe('A detailed outline of the current book.'),
   chapterOutline: z.string().describe('A detailed outline of the chapter.'),
+  previousChapters: z
+    .string()
+    .optional()
+    .describe('The text of previously generated chapters to maintain style and context.'),
   chapterLength: z
     .string()
     .optional()
@@ -54,6 +58,10 @@ const prompt = ai.definePrompt({
   Worldbuilding Information: {{{worldbuildingInformation}}}
   Book Outline: {{{bookOutline}}}
   Chapter Outline: {{{chapterOutline}}}
+  {{#if previousChapters}}
+  To ensure consistency, here is the text from the previous chapters:
+  {{{previousChapters}}}
+  {{/if}}
   {{#if chapterLength}}
   Target Chapter Length: {{{chapterLength}}}
   {{/if}}
