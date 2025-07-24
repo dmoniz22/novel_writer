@@ -142,7 +142,7 @@ export default function SagaForgePage() {
             {createUploadTrigger(name)}
           </div>
           <FormControl>
-            <>
+            <div>
               <input
                 type="file"
                 ref={fileInputRefs[name]}
@@ -156,7 +156,7 @@ export default function SagaForgePage() {
                 className="min-h-[150px] bg-background/50"
                 {...field}
               />
-            </>
+            </div>
           </FormControl>
           <FormMessage />
         </FormItem>
@@ -278,5 +278,3 @@ export default function SagaForgePage() {
     </div>
   );
 }
-
-    
