@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot } from 'lucide-react';
+import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -25,12 +25,21 @@ const formSchema = z.object({
   chapterOutline: z.string().min(50, 'Chapter outline must be at least 50 characters.'),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+type FormKeys = keyof FormValues;
+
 export default function SagaForgePage() {
   const [generatedText, setGeneratedText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const fileInputRefs: { [key in FormKeys]?: React.RefObject<HTMLInputElement> } = {
+    seriesOutline: useRef<HTMLInputElement>(null),
+    worldbuildingInformation: useRef<HTMLInputElement>(null),
+    bookOutline: useRef<HTMLInputElement>(null),
+    chapterOutline: useRef<HTMLInputElement>(null),
+  };
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       seriesOutline: '',
@@ -40,7 +49,50 @@ export default function SagaForgePage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: FormKeys) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    let combinedText = form.getValues(field) || '';
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const fileContent = event.target?.result as string;
+        if (combinedText.length > 0) {
+          combinedText += '\n\n---\n\n';
+        }
+        combinedText += `[${file.name}]\n${fileContent}`;
+        form.setValue(field, combinedText, { shouldValidate: true });
+      };
+      reader.onerror = (error) => {
+        console.error("Error reading file:", error);
+        toast({
+          variant: "destructive",
+          title: "File Read Error",
+          description: `Could not read the file ${file.name}.`,
+        });
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const createUploadTrigger = (field: FormKeys) => {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => fileInputRefs[field]?.current?.click()}
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        Upload File(s)
+      </Button>
+    );
+  };
+  
+
+  async function onSubmit(values: FormValues) {
     setIsGenerating(true);
     setGeneratedText('');
     try {
@@ -78,6 +130,40 @@ export default function SagaForgePage() {
     // Optional: scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const renderFormField = (name: FormKeys, label: string, placeholder: string, icon?: React.ReactNode) => (
+    <FormField
+      control={form.control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <div className="flex justify-between items-center">
+            <FormLabel className="font-bold flex items-center gap-2">{icon}{label}</FormLabel>
+            {createUploadTrigger(name)}
+          </div>
+          <FormControl>
+            <>
+              <input
+                type="file"
+                ref={fileInputRefs[name]}
+                multiple
+                onChange={(e) => handleFileChange(e, name)}
+                className="hidden"
+                accept=".txt,.md,.rtf"
+              />
+              <Textarea
+                placeholder={placeholder}
+                className="min-h-[150px] bg-background/50"
+                {...field}
+              />
+            </>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -123,32 +209,8 @@ export default function SagaForgePage() {
                     <CardDescription>Input your foundational lore. The more detailed, the better the results.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="seriesOutline"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="font-bold">Series Outline</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Paste your grand series outline here..." className="min-h-[150px] bg-background/50" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="worldbuildingInformation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="font-bold flex items-center gap-2"><Map size={16} /> Worldbuilding & Lore</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Describe your world: its magic system, key locations, cultures, history..." className="min-h-[150px] bg-background/50" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {renderFormField("seriesOutline", "Series Outline", "Paste your grand series outline here...")}
+                    {renderFormField("worldbuildingInformation", "Worldbuilding & Lore", "Describe your world: its magic system, key locations, cultures, history...", <Map size={16} />)}
                   </CardContent>
                 </Card>
 
@@ -158,32 +220,8 @@ export default function SagaForgePage() {
                     <CardDescription>Detail the current book and the chapter you want to generate.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="bookOutline"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="font-bold">Book Outline</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Outline the plot for the current book..." className="min-h-[120px] bg-background/50" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                     <FormField
-                      control={form.control}
-                      name="chapterOutline"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="font-bold flex items-center gap-2"><FileText size={16}/> Chapter Outline</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Provide a detailed outline for this specific chapter. What happens? Who is present? What is the tone?" className="min-h-[120px] bg-background/50" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                     {renderFormField("bookOutline", "Book Outline", "Outline the plot for the current book...")}
+                     {renderFormField("chapterOutline", "Chapter Outline", "Provide a detailed outline for this specific chapter. What happens? Who is present? What is the tone?", <FileText size={16} />)}
                   </CardContent>
                 </Card>
                  <Button type="submit" size="lg" className="w-full font-bold text-lg" disabled={isGenerating}>
@@ -240,3 +278,5 @@ export default function SagaForgePage() {
     </div>
   );
 }
+
+    
