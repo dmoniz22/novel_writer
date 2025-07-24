@@ -8,16 +8,19 @@ interface AuthContextType {
   user: User | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  isAuthReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      setIsAuthReady(true);
     });
 
     getRedirectResult(auth).catch((error) => {
@@ -45,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, signInWithGoogle, signOut, isAuthReady }}>
       {children}
     </AuthContext.Provider>
   );

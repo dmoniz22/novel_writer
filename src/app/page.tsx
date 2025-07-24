@@ -301,18 +301,7 @@ function UnauthContent() {
 }
 
 export default function SagaForgePage() {
-  const { user, signInWithGoogle, signOut } = useAuth();
-  const [isAuthReady, setIsAuthReady] = useState(false);
-
-  // This effect ensures we don't flash the unauth content while firebase is initializing
-  useState(() => {
-    // This is a bit of a hack to wait for the auth state to be ready
-    // A better solution would be to have a status in the useAuth hook
-    setTimeout(() => {
-      setIsAuthReady(true);
-    }, 500)
-  });
-
+  const { user, signInWithGoogle, signOut, isAuthReady } = useAuth();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -360,7 +349,7 @@ export default function SagaForgePage() {
       </header>
       
       <main className="flex-1 container py-8 flex items-center justify-center">
-        { !isAuthReady && <Skeleton className="h-48 w-full" />}
+        { !isAuthReady && <div className='text-center'><p>Initializing Authentication...</p><Skeleton className="h-48 w-full mt-4" /></div>}
         { isAuthReady && user && <AuthContent /> }
         { isAuthReady && !user && <UnauthContent /> }
       </main>
