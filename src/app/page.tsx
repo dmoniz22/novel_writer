@@ -9,11 +9,12 @@ import { generateChapterText } from '@/ai/flows/generate-chapter-text';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload } from 'lucide-react';
+import { Feather, BookOpen, Map, Swords, Sparkles, User, FileText, Bot, Upload, PenTool, Book } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -23,10 +24,12 @@ const formSchema = z.object({
   worldbuildingInformation: z.string().min(50, 'Worldbuilding information must be at least 50 characters.'),
   bookOutline: z.string().min(50, 'Book outline must be at least 50 characters.'),
   chapterOutline: z.string().min(50, 'Chapter outline must be at least 50 characters.'),
+  chapterLength: z.string().optional(),
+  writingStyle: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-type FormKeys = keyof FormValues;
+type FormKeys = keyof Pick<FormValues, 'seriesOutline' | 'worldbuildingInformation' | 'bookOutline' | 'chapterOutline'>;
 
 export default function SagaForgePage() {
   const [generatedText, setGeneratedText] = useState('');
@@ -46,6 +49,8 @@ export default function SagaForgePage() {
       worldbuildingInformation: '',
       bookOutline: '',
       chapterOutline: '',
+      chapterLength: '',
+      writingStyle: '',
     },
   });
 
@@ -219,9 +224,37 @@ export default function SagaForgePage() {
                     <CardTitle className="font-headline flex items-center gap-2 text-2xl"><BookOpen className="text-accent"/> Current Manuscript</CardTitle>
                     <CardDescription>Detail the current book and the chapter you want to generate.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-6">
                      {renderFormField("bookOutline", "Book Outline", "Outline the plot for the current book...")}
                      {renderFormField("chapterOutline", "Chapter Outline", "Provide a detailed outline for this specific chapter. What happens? Who is present? What is the tone?", <FileText size={16} />)}
+                     <div className="grid sm:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="chapterLength"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel className="font-bold flex items-center gap-2"><Book size={16} />Est. Chapter Length</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., 3000 words or 10 pages" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="writingStyle"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel className="font-bold flex items-center gap-2"><PenTool size={16}/>Writing Style</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., J.R.R. Tolkien, Brandon Sanderson" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                     </div>
                   </CardContent>
                 </Card>
                  <Button type="submit" size="lg" className="w-full font-bold text-lg" disabled={isGenerating}>

@@ -20,6 +20,14 @@ const GenerateChapterTextInputSchema = z.object({
     .describe('Information about the world in which the story takes place.'),
   bookOutline: z.string().describe('A detailed outline of the current book.'),
   chapterOutline: z.string().describe('A detailed outline of the chapter.'),
+  chapterLength: z
+    .string()
+    .optional()
+    .describe('The estimated length of the chapter (e.g., "3000 words", "10 pages").'),
+  writingStyle: z
+    .string()
+    .optional()
+    .describe('A list of authors or styles to emulate (e.g., "J.R.R. Tolkien, Brandon Sanderson").'),
 });
 export type GenerateChapterTextInput = z.infer<typeof GenerateChapterTextInputSchema>;
 
@@ -46,6 +54,12 @@ const prompt = ai.definePrompt({
   Worldbuilding Information: {{{worldbuildingInformation}}}
   Book Outline: {{{bookOutline}}}
   Chapter Outline: {{{chapterOutline}}}
+  {{#if chapterLength}}
+  Target Chapter Length: {{{chapterLength}}}
+  {{/if}}
+  {{#if writingStyle}}
+  Emulate the writing style of: {{{writingStyle}}}
+  {{/if}}
 
   Write the chapter text.`,
 });
